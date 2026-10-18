@@ -1,0 +1,413 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "KARP Agents API",
+    "version": "1.2.0",
+    "description": "Research and fact-checking for AI agents from KARP, SoulDriver's multi-model research engine (GPT, Gemini, Grok and Claude). Pay per call with x402; no account or API key.",
+    "x-guidance": "Start with the free POST /v1/coverage: it says whether KARP has research on a topic and which endpoint to call next. POST /v1/ask returns dated research cards ($0.03); POST /v1/check fact-checks one claim live with four web-searching models ($0.25). Pay with x402 (USDC on Base or Solana): an unpaid call returns 402 with the requirements in the PAYMENT-REQUIRED header. Nothing is charged if a call fails. Full guide: https://agents.souldriver.com.au/llms.txt",
+    "contact": {
+      "name": "SoulDriver",
+      "url": "https://souldriver.com.au",
+      "email": "agents@souldriver.com.au"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://agents.souldriver.com.au"
+    }
+  ],
+  "x-agentcash-guidance": {
+    "llmsTxtUrl": "https://agents.souldriver.com.au/llms.txt"
+  },
+  "paths": {
+    "/v1/coverage": {
+      "post": {
+        "operationId": "coverage",
+        "summary": "Check whether KARP already has research on a topic",
+        "description": "Free. Does KARP, SoulDriver's multi-model research engine, already cover this topic? Returns covered / partial / none, the newest matching research date, matching titles and the recommended next endpoint. Use it first.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Topic or question"
+                  }
+                },
+                "required": [
+                  "query"
+                ]
+              },
+              "example": {
+                "query": "AI governance in 2026"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Coverage band, newest research date, matching titles, recommended next endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body (never charged)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Busy or temporarily unavailable; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ask": {
+      "post": {
+        "operationId": "ask",
+        "summary": "Fetch dated research cards from the KARP library",
+        "description": "Research cards from KARP, SoulDriver's multi-model research engine: GPT, Gemini, Grok and Claude debate a topic over many rounds and publish a conclusion. Each card gives the conclusion, key insight, warnings, dated figures, consensus status, open questions, research date and staleness. See what is covered first with the free POST /v1/coverage; verify time-sensitive points with POST /v1/check. Catalogue: GET /. ~15 s.",
+        "security": [],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.03"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Topic or question"
+                  },
+                  "max_cards": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 8,
+                    "default": 5,
+                    "description": "Research cards to return"
+                  }
+                },
+                "required": [
+                  "query"
+                ]
+              },
+              "example": {
+                "query": "AI governance in 2026",
+                "max_cards": 5
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Result. The payment settled only because the call succeeded (PAYMENT-RESPONSE header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "example": {
+                  "query": "AI governance in 2026",
+                  "cards": [
+                    {
+                      "rank": 1,
+                      "session_id": "karp_1775506768",
+                      "date": "2026-04-06",
+                      "age_days": 193,
+                      "stale": true,
+                      "relevance": 0.994,
+                      "topic": "AI governance 2026: latest regulatory developments, EU AI Act enforcement updates, and Australia's AI safety framework progress",
+                      "conclusion": "A bifurcated global landscape: the EU has paused high-risk enforcement pending harmonised standards, while Australia enforces AI obligations through existing privacy law.",
+                      "key_insight": "The 40% grey zone in high-risk AI categorisation reflects a failure of categorical logic, not just technical standards.",
+                      "warnings": [
+                        "Agentic AI may operate outside existing legal frameworks."
+                      ],
+                      "anchors": [
+                        {
+                          "label": "ISO 42001 Certification Cost",
+                          "value": "$85,000 - $650,000",
+                          "as_of": "2026-04-07"
+                        }
+                      ],
+                      "open_questions": [
+                        "How will legal frameworks adapt to agentic AI systems?"
+                      ]
+                    }
+                  ],
+                  "related_research": [
+                    {
+                      "session_id": "karp_1775819207",
+                      "date": "2026-04-10",
+                      "topic": "Timeline of the US federal-state AI regulatory collision"
+                    }
+                  ],
+                  "top_relevance": 0.994
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body (never charged)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment required: x402 v2 requirements (USDC on Base or Solana) in the PAYMENT-REQUIRED header. Sign and retry with PAYMENT-SIGNATURE.",
+            "headers": {
+              "PAYMENT-REQUIRED": {
+                "description": "Base64-encoded JSON x402 PaymentRequired",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This payment was already used; sign a new one for each request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Busy or temporarily unavailable; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/check": {
+      "post": {
+        "operationId": "check",
+        "summary": "Verify one claim with four web-searching AI models",
+        "description": "Hallucination check: a live fact-check of one claim by four independent AI models (GPT, Gemini, Grok, Claude), each searching the web separately. Returns a summary first: verdict (confirmed, disputed, unverifiable, or contested when the models split), agreement such as 4/4, mean confidence and a one-line headline. Then each model's verdict, reasoning and cited sources. Disagreement is shown, not hidden. 10-45 s.",
+        "security": [],
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.25"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "claim": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "One factual claim to check"
+                  }
+                },
+                "required": [
+                  "claim"
+                ]
+              },
+              "example": {
+                "claim": "Spain won the 2026 FIFA World Cup."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Result. The payment settled only because the call succeeded (PAYMENT-RESPONSE header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "example": {
+                  "claim": "Spain won the 2026 FIFA World Cup.",
+                  "summary": {
+                    "verdict": "confirmed",
+                    "status": "unanimous",
+                    "agreement": "4/4",
+                    "mean_confidence": 0.963,
+                    "headline": "Confirmed: all 4 grounded providers agree."
+                  },
+                  "verdicts": [
+                    {
+                      "provider": "grok",
+                      "verdict": "confirmed",
+                      "confidence": 0.95,
+                      "reasoning": "...",
+                      "citations": [
+                        {
+                          "url": "https://...",
+                          "title": "..."
+                        }
+                      ],
+                      "citation_kind": "cited"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body (never charged)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment required: x402 v2 requirements (USDC on Base or Solana) in the PAYMENT-REQUIRED header. Sign and retry with PAYMENT-SIGNATURE.",
+            "headers": {
+              "PAYMENT-REQUIRED": {
+                "description": "Base64-encoded JSON x402 PaymentRequired",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This payment was already used; sign a new one for each request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Busy or temporarily unavailable; see Retry-After",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health",
+        "summary": "Report API liveness and payment status",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      }
+    }
+  }
+}
